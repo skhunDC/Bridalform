@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { findBestDesignerMatch, normalizePayload, isAuthorizedEmail } = require('./utils');
+const { findBestDesignerMatch, normalizePayload, isAuthorizedEmail, FIELD_MAP } = require('./utils');
 
 test('designer alias map resolves canonical name', () => {
   const m = findBestDesignerMatch('justin alexandar');
@@ -24,4 +24,9 @@ test('normalize payload keeps required structures', () => {
 test('authorization allows only approved users', () => {
   assert.equal(isAuthorizedEmail('skhun@dublincleaners.com'), true);
   assert.equal(isAuthorizedEmail('someone@else.com'), false);
+});
+
+test('field map preserves one-to-one schema uniqueness', () => {
+  assert.equal(FIELD_MAP.length, 37);
+  assert.equal(new Set(FIELD_MAP).size, FIELD_MAP.length);
 });

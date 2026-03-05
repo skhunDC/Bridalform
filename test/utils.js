@@ -1,12 +1,19 @@
 const DESIGNER_CANONICAL = [
-  'Allure Bridals','Amsale','BHLDN','David\'s Bridal','Enzoani','Essense of Australia','Justin Alexander','Maggie Sottero','Morilee','Pronovias','Rosa Clara','Stella York','Vera Wang'
+  'Allure Bridals', 'Amsale', 'BHLDN', 'David\'s Bridal', 'Enzoani', 'Essense of Australia', 'Justin Alexander', 'Maggie Sottero', 'Morilee', 'Pronovias', 'Rosa Clara', 'Stella York', 'Vera Wang'
 ];
 const DESIGNER_ALIASES = {
   'davids bridal': 'David\'s Bridal',
   'justin alexandar': 'Justin Alexander',
-  'pronovia': 'Pronovias'
+  pronovia: 'Pronovias'
 };
 const MATCH_THRESHOLD = 0.78;
+
+const FIELD_MAP = [
+  'submissionTimestamp','submittedByEmail','customerName','phone','email','brideFirstName','marriedLastName','maidenLastName','address1','city','state','zip',
+  'weddingDate','gownPrice','numberOfPieces','designerInput','designerCanonical','designerMatchScore','itemsIncluded','itemsOtherText',
+  'materialType','materialOtherText','colorType','colorOtherText','inspectionIssues','embellishmentsAddedDescription','comments','seamstressName','bridalSalonName',
+  'referralSources','referralOtherText','serviceRequested','viewBeforeBoxed','estimatedCost','consentAccepted','signatureName','signatureDate'
+];
 
 function normalizeKey(str){return String(str||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();}
 function levenshtein(a,b){const m=a.length,n=b.length,dp=Array.from({length:m+1},()=>Array(n+1).fill(0));for(let i=0;i<=m;i++)dp[i][0]=i;for(let j=0;j<=n;j++)dp[0][j]=j;for(let i=1;i<=m;i++){for(let j=1;j<=n;j++){const c=a[i-1]===b[j-1]?0:1;dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+c)}}return dp[m][n]}
@@ -41,4 +48,4 @@ function isAuthorizedEmail(email){
   return ['skhun@dublincleaners.com','ss.sku@gmail.com'].includes(String(email||'').toLowerCase());
 }
 
-module.exports = { findBestDesignerMatch, normalizePayload, isAuthorizedEmail };
+module.exports = { findBestDesignerMatch, normalizePayload, isAuthorizedEmail, FIELD_MAP };

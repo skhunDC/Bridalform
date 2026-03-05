@@ -4,49 +4,20 @@
     <meta charset="utf-8">
     <style>
       body{font-family:Arial,sans-serif;color:#111;line-height:1.45;padding:24px}
-      h1{font-size:20px;margin:0 0 6px} h2{font-size:14px;margin:18px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px}
-      .row{margin:4px 0} .k{font-weight:700}
+      h1{font-size:20px;margin:0 0 8px}
+      h2{font-size:14px;margin:18px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}
+      .row{margin:5px 0}
+      .k{font-weight:700;display:inline-block;min-width:220px}
     </style>
   </head>
   <body>
     <h1>Dublin Cleaners — Wedding Gown Intake</h1>
-    <div class="row"><span class="k">Submitted:</span> <?= data.submissionTimestamp ?></div>
-    <div class="row"><span class="k">Submitted by:</span> <?= data.submittedByEmail ?></div>
 
-    <h2>Customer info</h2>
-    <div class="row"><span class="k">Customer:</span> <?= data.customerName ?></div>
-    <div class="row"><span class="k">Phone:</span> <?= data.phone ?></div>
-    <div class="row"><span class="k">Email:</span> <?= data.email ?></div>
-    <div class="row"><span class="k">Bride first name:</span> <?= data.brideFirstName ?></div>
-    <div class="row"><span class="k">Married last name:</span> <?= data.marriedLastName ?></div>
-    <div class="row"><span class="k">Maiden last name:</span> <?= data.maidenLastName ?></div>
-    <div class="row"><span class="k">Address:</span> <?= data.address1 ?>, <?= data.city ?>, <?= data.state ?> <?= data.zip ?></div>
-
-    <h2>Wedding & gown basics</h2>
-    <div class="row"><span class="k">Wedding date:</span> <?= data.weddingDate ?></div>
-    <div class="row"><span class="k">Gown price:</span> <?= data.gownPrice ?></div>
-    <div class="row"><span class="k">Number of pieces:</span> <?= data.numberOfPieces ?></div>
-    <div class="row"><span class="k">Designer input:</span> <?= data.designerInput ?></div>
-    <div class="row"><span class="k">Designer canonical:</span> <?= data.designerCanonical ?> (<?= data.designerMatchScore ?>)</div>
-
-    <h2>Details</h2>
-    <div class="row"><span class="k">Items included:</span> <?= data.itemsIncluded.join(', ') ?></div>
-    <div class="row"><span class="k">Items other:</span> <?= data.itemsOtherText ?></div>
-    <div class="row"><span class="k">Material:</span> <?= data.materialType ?> <?= data.materialOtherText ?></div>
-    <div class="row"><span class="k">Color:</span> <?= data.colorType ?> <?= data.colorOtherText ?></div>
-    <div class="row"><span class="k">Inspection issues:</span> <?= data.inspectionIssues.join(', ') ?></div>
-    <div class="row"><span class="k">Embellishments description:</span> <?= data.embellishmentsAddedDescription ?></div>
-    <div class="row"><span class="k">Comments:</span> <?= data.comments ?></div>
-    <div class="row"><span class="k">Seamstress name:</span> <?= data.seamstressName ?></div>
-    <div class="row"><span class="k">Bridal salon name:</span> <?= data.bridalSalonName ?></div>
-    <div class="row"><span class="k">Referral:</span> <?= data.referralSources.join(', ') ?> <?= data.referralOtherText ?></div>
-    <div class="row"><span class="k">Services:</span> <?= data.serviceRequested.join(', ') ?></div>
-    <div class="row"><span class="k">View before boxed:</span> <?= data.viewBeforeBoxed ?></div>
-    <div class="row"><span class="k">Estimated cost:</span> <?= data.estimatedCost ?></div>
-
-    <h2>Consent</h2>
-    <div class="row"><span class="k">Accepted:</span> <?= data.consentAccepted ? 'Yes' : 'No' ?></div>
-    <div class="row"><span class="k">Signature:</span> <?= data.signatureName ?></div>
-    <div class="row"><span class="k">Signature date:</span> <?= data.signatureDate ?></div>
+    <? for (let i = 0; i < sections.length; i++) { ?>
+      <h2><?= sections[i].sectionName ?></h2>
+      <? for (let j = 0; j < sections[i].rows.length; j++) { ?>
+        <div class="row"><span class="k"><?= sections[i].rows[j].label ?>:</span> <?= sections[i].rows[j].value ?></div>
+      <? } ?>
+    <? } ?>
   </body>
 </html>

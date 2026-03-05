@@ -23,40 +23,76 @@ const DESIGNER_CANONICAL = [
 ];
 
 const DESIGNER_ALIASES = {
-  'allure': 'Allure Bridals',
+  allure: 'Allure Bridals',
   'allure bridals': 'Allure Bridals',
-  'amsale': 'Amsale',
-  'bhldn': 'BHLDN',
+  amsale: 'Amsale',
+  bhldn: 'BHLDN',
   'davids bridal': 'David\'s Bridal',
   'david bridal': 'David\'s Bridal',
   'enzo ani': 'Enzoani',
   'essence of australia': 'Essense of Australia',
-  'galia': 'Galia Lahav',
+  galia: 'Galia Lahav',
   'justin alexandar': 'Justin Alexander',
   'maggie sotero': 'Maggie Sottero',
   'morilee by madeline gardner': 'Morilee',
-  'oleg': 'Oleg Cassini',
-  'pronovia': 'Pronovias',
+  oleg: 'Oleg Cassini',
+  pronovia: 'Pronovias',
   'rosa claraa': 'Rosa Clara',
   'stella yorke': 'Stella York',
-  'vera': 'Vera Wang'
+  vera: 'Vera Wang'
 };
 
-const SHEET_HEADERS = [
-  'submissionTimestamp', 'submittedByEmail',
-  'customerName', 'phone', 'email', 'brideFirstName', 'marriedLastName', 'maidenLastName',
-  'address1', 'city', 'state', 'zip',
-  'weddingDate', 'gownPrice', 'numberOfPieces',
-  'designerInput', 'designerCanonical', 'designerMatchScore',
-  'itemsIncluded', 'itemsOtherText',
-  'materialType', 'materialOtherText',
-  'colorType', 'colorOtherText',
-  'inspectionIssues', 'embellishmentsAddedDescription', 'comments',
-  'seamstressName', 'bridalSalonName',
-  'referralSources', 'referralOtherText',
-  'serviceRequested', 'viewBeforeBoxed', 'estimatedCost',
-  'consentAccepted', 'signatureName', 'signatureDate'
+// 1:1 mapping contract: payload key -> sheet header -> PDF section/label.
+const FIELD_MAP = [
+  { key: 'submissionTimestamp', header: 'submissionTimestamp', section: 'Submission', label: 'Submitted at', type: 'datetime' },
+  { key: 'submittedByEmail', header: 'submittedByEmail', section: 'Submission', label: 'Submitted by', type: 'text' },
+
+  { key: 'customerName', header: 'customerName', section: 'Customer info', label: 'Customer name', type: 'text' },
+  { key: 'phone', header: 'phone', section: 'Customer info', label: 'Phone', type: 'text' },
+  { key: 'email', header: 'email', section: 'Customer info', label: 'Email', type: 'text' },
+  { key: 'brideFirstName', header: 'brideFirstName', section: 'Customer info', label: 'Bride first name', type: 'text' },
+  { key: 'marriedLastName', header: 'marriedLastName', section: 'Customer info', label: 'Married last name', type: 'text' },
+  { key: 'maidenLastName', header: 'maidenLastName', section: 'Customer info', label: 'Maiden last name', type: 'text' },
+  { key: 'address1', header: 'address1', section: 'Customer info', label: 'Address line 1', type: 'text' },
+  { key: 'city', header: 'city', section: 'Customer info', label: 'City', type: 'text' },
+  { key: 'state', header: 'state', section: 'Customer info', label: 'State', type: 'text' },
+  { key: 'zip', header: 'zip', section: 'Customer info', label: 'ZIP', type: 'text' },
+
+  { key: 'weddingDate', header: 'weddingDate', section: 'Wedding & gown basics', label: 'Wedding date', type: 'text' },
+  { key: 'gownPrice', header: 'gownPrice', section: 'Wedding & gown basics', label: 'Gown price', type: 'text' },
+  { key: 'numberOfPieces', header: 'numberOfPieces', section: 'Wedding & gown basics', label: 'Number of pieces', type: 'text' },
+  { key: 'designerInput', header: 'designerInput', section: 'Wedding & gown basics', label: 'Designer input', type: 'text' },
+  { key: 'designerCanonical', header: 'designerCanonical', section: 'Wedding & gown basics', label: 'Designer canonical', type: 'text' },
+  { key: 'designerMatchScore', header: 'designerMatchScore', section: 'Wedding & gown basics', label: 'Designer match score', type: 'text' },
+
+  { key: 'itemsIncluded', header: 'itemsIncluded', section: 'Items included', label: 'Items included', type: 'array' },
+  { key: 'itemsOtherText', header: 'itemsOtherText', section: 'Items included', label: 'Items other text', type: 'text' },
+
+  { key: 'materialType', header: 'materialType', section: 'Materials', label: 'Material type', type: 'text' },
+  { key: 'materialOtherText', header: 'materialOtherText', section: 'Materials', label: 'Material other text', type: 'text' },
+  { key: 'colorType', header: 'colorType', section: 'Color', label: 'Color type', type: 'text' },
+  { key: 'colorOtherText', header: 'colorOtherText', section: 'Color', label: 'Color other text', type: 'text' },
+
+  { key: 'inspectionIssues', header: 'inspectionIssues', section: 'Condition / notes', label: 'Inspection issues', type: 'array' },
+  { key: 'embellishmentsAddedDescription', header: 'embellishmentsAddedDescription', section: 'Condition / notes', label: 'Embellishments description', type: 'text' },
+  { key: 'comments', header: 'comments', section: 'Condition / notes', label: 'Comments', type: 'text' },
+
+  { key: 'seamstressName', header: 'seamstressName', section: 'Operations', label: 'Seamstress name', type: 'text' },
+  { key: 'bridalSalonName', header: 'bridalSalonName', section: 'Operations', label: 'Bridal salon name', type: 'text' },
+
+  { key: 'referralSources', header: 'referralSources', section: 'Referral tracking', label: 'Referral sources', type: 'array' },
+  { key: 'referralOtherText', header: 'referralOtherText', section: 'Referral tracking', label: 'Referral other text', type: 'text' },
+
+  { key: 'serviceRequested', header: 'serviceRequested', section: 'Services', label: 'Service requested', type: 'array' },
+  { key: 'viewBeforeBoxed', header: 'viewBeforeBoxed', section: 'Services', label: 'View before boxed', type: 'text' },
+  { key: 'estimatedCost', header: 'estimatedCost', section: 'Services', label: 'Estimated cost', type: 'text' },
+
+  { key: 'consentAccepted', header: 'consentAccepted', section: 'Consent + signature', label: 'Consent accepted', type: 'boolean' },
+  { key: 'signatureName', header: 'signatureName', section: 'Consent + signature', label: 'Signature name', type: 'text' },
+  { key: 'signatureDate', header: 'signatureDate', section: 'Consent + signature', label: 'Signature date', type: 'text' }
 ];
+
+const SHEET_HEADERS = FIELD_MAP.map((x) => x.header);
 
 function doGet() {
   const user = getCurrentUserEmail_();
@@ -78,53 +114,28 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-function getAppBootstrap() {
-  const email = getCurrentUserEmail_();
-  return {
-    userEmail: email,
-    authorized: isAuthorizedEmail_(email),
-    designers: DESIGNER_CANONICAL,
-    aliasMap: DESIGNER_ALIASES,
-    matchThreshold: CONFIG.matchThreshold
-  };
-}
-
 function submitIntake(payload) {
   const email = getCurrentUserEmail_();
-  if (!isAuthorizedEmail_(email)) {
-    throw new Error('Unauthorized access.');
-  }
+  if (!isAuthorizedEmail_(email)) throw new Error('Unauthorized access.');
 
   enforceRateLimit_(email);
-
-  if (payload && payload.website && String(payload.website).trim() !== '') {
-    throw new Error('Submission rejected.');
-  }
+  if (payload && payload.website && String(payload.website).trim() !== '') throw new Error('Submission rejected.');
 
   const normalized = normalizePayload_(payload || {});
   const validationError = validatePayload_(normalized);
-  if (validationError) {
-    throw new Error(validationError);
-  }
+  if (validationError) throw new Error(validationError);
 
   normalized.submissionTimestamp = new Date();
   normalized.submittedByEmail = email;
 
   const sheet = getOrCreateSheet_();
-  const row = SHEET_HEADERS.map((header) => {
-    const value = normalized[header];
-    if (Array.isArray(value)) return value.join(', ');
-    return value === undefined || value === null ? '' : value;
-  });
+  const row = FIELD_MAP.map((field) => toSheetValue_(normalized[field.key], field.type));
   sheet.appendRow(row);
 
   const pdfBlob = buildPdf_(normalized);
   sendNotificationEmail_(normalized, pdfBlob);
 
-  return {
-    ok: true,
-    message: 'Submission saved and emailed successfully.'
-  };
+  return { ok: true, message: 'Submission saved and emailed successfully.' };
 }
 
 function normalizePayload_(payload) {
@@ -191,7 +202,6 @@ function validatePayload_(data) {
     ['signatureName', 'Signature name is required.'],
     ['signatureDate', 'Signature date is required.']
   ];
-
   for (let i = 0; i < required.length; i++) {
     if (!data[required[i][0]]) return required[i][1];
   }
@@ -200,27 +210,44 @@ function validatePayload_(data) {
   return null;
 }
 
+function toSheetValue_(value, type) {
+  if (type === 'array') return Array.isArray(value) ? value.join(', ') : '';
+  if (type === 'boolean') return value ? 'Yes' : 'No';
+  if (value === undefined || value === null) return '';
+  return value;
+}
+
+function buildPdfModel_(data) {
+  const sections = {};
+  FIELD_MAP.forEach((field) => {
+    if (!sections[field.section]) sections[field.section] = [];
+    sections[field.section].push({
+      label: field.label,
+      value: toSheetValue_(data[field.key], field.type)
+    });
+  });
+
+  return Object.keys(sections).map((sectionName) => ({
+    sectionName: sectionName,
+    rows: sections[sectionName]
+  }));
+}
+
 function findBestDesignerMatch_(input) {
   const typed = String(input || '').trim();
   if (!typed) return { canonical: '', score: 0 };
 
   const normalized = normalizeDesignerKey_(typed);
-  if (DESIGNER_ALIASES[normalized]) {
-    return { canonical: DESIGNER_ALIASES[normalized], score: 1 };
-  }
+  if (DESIGNER_ALIASES[normalized]) return { canonical: DESIGNER_ALIASES[normalized], score: 1 };
 
   let best = { canonical: typed, score: 0 };
   for (let i = 0; i < DESIGNER_CANONICAL.length; i++) {
     const candidate = DESIGNER_CANONICAL[i];
     const score = similarity_(normalizeDesignerKey_(typed), normalizeDesignerKey_(candidate));
-    if (score > best.score) {
-      best = { canonical: candidate, score: Number(score.toFixed(3)) };
-    }
+    if (score > best.score) best = { canonical: candidate, score: Number(score.toFixed(3)) };
   }
 
-  if (best.score >= CONFIG.matchThreshold) {
-    return best;
-  }
+  if (best.score >= CONFIG.matchThreshold) return best;
   return { canonical: typed, score: Number(best.score.toFixed(3)) };
 }
 
@@ -239,22 +266,12 @@ function levenshtein_(a, b) {
   const m = a.length;
   const n = b.length;
   const dp = [];
-
-  for (let i = 0; i <= m; i++) {
-    dp[i] = [i];
-  }
-  for (let j = 1; j <= n; j++) {
-    dp[0][j] = j;
-  }
-
+  for (let i = 0; i <= m; i++) dp[i] = [i];
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
     }
   }
   return dp[m][n];
@@ -270,20 +287,15 @@ function isAuthorizedEmail_(email) {
 
 function formatPhone_(phone) {
   const digits = phone.replace(/\D/g, '');
-  if (digits.length === 10) {
-    return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
-  }
+  if (digits.length === 10) return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
   return phone;
 }
 
 function enforceRateLimit_(identity) {
   const cache = CacheService.getScriptCache();
   const key = 'rate_' + identity;
-  const raw = cache.get(key);
-  const count = raw ? Number(raw) : 0;
-  if (count >= CONFIG.rateLimitMax) {
-    throw new Error('Too many submissions. Please wait a moment and retry.');
-  }
+  const count = Number(cache.get(key) || '0');
+  if (count >= CONFIG.rateLimitMax) throw new Error('Too many submissions. Please wait a moment and retry.');
   cache.put(key, String(count + 1), CONFIG.rateLimitWindowSec);
 }
 
@@ -306,25 +318,19 @@ function getOrCreateSheet_() {
   }
 
   let sheet = ss.getSheetByName('Submissions');
-  if (!sheet) {
-    sheet = ss.insertSheet('Submissions');
-  }
+  if (!sheet) sheet = ss.insertSheet('Submissions');
 
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(SHEET_HEADERS);
-  }
+  if (sheet.getLastRow() === 0) sheet.appendRow(SHEET_HEADERS);
 
   return sheet;
 }
 
 function buildPdf_(data) {
   const template = HtmlService.createTemplateFromFile('print');
-  template.data = data;
+  template.sections = buildPdfModel_(data);
   const html = template.evaluate().getContent();
   const safeName = (data.customerName || 'Bridal Intake').replace(/[^a-z0-9]/gi, '_');
-  return Utilities.newBlob(html, 'text/html', 'intake.html')
-    .getAs(MimeType.PDF)
-    .setName('Dublin_Cleaners_Intake_' + safeName + '.pdf');
+  return Utilities.newBlob(html, 'text/html', 'intake.html').getAs(MimeType.PDF).setName('Dublin_Cleaners_Intake_' + safeName + '.pdf');
 }
 
 function sendNotificationEmail_(data, pdfBlob) {
@@ -337,9 +343,9 @@ function sendNotificationEmail_(data, pdfBlob) {
     'Email: ' + data.email,
     'Wedding Date: ' + data.weddingDate,
     'Designer Input: ' + data.designerInput,
-    'Designer Canonical: ' + data.designerCanonical,
-    'Services: ' + data.serviceRequested.join(', '),
-    'Items Included: ' + data.itemsIncluded.join(', '),
+    'Designer Canonical: ' + data.designerCanonical + ' (' + data.designerMatchScore + ')',
+    'Services: ' + (data.serviceRequested || []).join(', '),
+    'Items Included: ' + (data.itemsIncluded || []).join(', '),
     'View Before Boxed: ' + data.viewBeforeBoxed,
     'Estimated Cost: ' + data.estimatedCost,
     '',
