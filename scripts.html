@@ -1,20 +1,9 @@
 <script>
 (() => {
   const config = window.__APP_CONFIG__ || {};
-  const unauthorizedView = document.getElementById('unauthorizedView');
-  const appView = document.getElementById('appView');
   const form = document.getElementById('intakeForm');
   const statusEl = document.getElementById('status');
   const submitBtn = document.getElementById('submitBtn');
-
-  if (!config.authorized) {
-    unauthorizedView.classList.remove('hidden');
-    appView.classList.add('hidden');
-    return;
-  }
-
-  unauthorizedView.classList.add('hidden');
-  appView.classList.remove('hidden');
 
   const toggles = [
     ['itemsOther', 'itemsOtherTextWrap'],

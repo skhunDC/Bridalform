@@ -44,8 +44,4 @@ function normalizePayload(payload){
   };
 }
 
-function isAuthorizedEmail(email){
-  return ['skhun@dublincleaners.com','ss.sku@gmail.com'].includes(String(email||'').toLowerCase());
-}
-
-module.exports = { findBestDesignerMatch, normalizePayload, isAuthorizedEmail, FIELD_MAP };
+module.exports = { findBestDesignerMatch, normalizePayload, FIELD_MAP };
