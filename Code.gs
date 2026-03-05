@@ -111,7 +111,17 @@ function doGet() {
 }
 
 function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  const rawName = String(filename || '').trim();
+  const normalizedName = rawName.replace(/\.html$/i, '');
+
+  if (!normalizedName) {
+    throw new Error('Template include filename is required.');
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(normalizedName)) {
+    throw new Error(`Invalid template include filename: ${rawName}`);
+  }
+
+  return HtmlService.createHtmlOutputFromFile(normalizedName).getContent();
 }
 
 function submitIntake(payload) {
