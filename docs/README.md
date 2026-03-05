@@ -62,6 +62,14 @@ This implementation uses a single `FIELD_MAP` in `Code.gs` to drive:
 | signatureName | signatureName | Consent + signature | Signature name |
 | signatureDate | signatureDate | Consent + signature | Signature date |
 
+
+## Spreadsheet Privacy & Access Controls
+- The app enforces spreadsheet hardening on each submission (`hardenSpreadsheetAccess_`) to keep intake data private.
+- Sharing is forced to **Private** so the sheet is not publicly reachable by link.
+- Existing viewers are removed, and editors are reduced to the file owner plus an optional allowlist.
+- Optional editor allowlist is configured via script property `BRIDAL_INTAKE_ALLOWED_EDITOR_EMAILS` (comma-separated lowercase/uppercase emails accepted).
+- A sheet protection rule is applied to the `Submissions` tab so only allowed editors can modify intake rows outside the app flow.
+
 ## Deployment Setup (Google Apps Script)
 1. Create a standalone Apps Script project.
 2. Replace project files with repository root files.
