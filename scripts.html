@@ -1,0 +1,156 @@
+<script>
+(() => {
+  const config = window.__APP_CONFIG__ || {};
+  const unauthorizedView = document.getElementById('unauthorizedView');
+  const appView = document.getElementById('appView');
+  const form = document.getElementById('intakeForm');
+  const statusEl = document.getElementById('status');
+  const submitBtn = document.getElementById('submitBtn');
+
+  if (!config.authorized) {
+    unauthorizedView.classList.remove('hidden');
+    appView.classList.add('hidden');
+    return;
+  }
+
+  unauthorizedView.classList.add('hidden');
+  appView.classList.remove('hidden');
+
+  const toggles = [
+    ['itemsOther', 'itemsOtherTextWrap'],
+    ['referralOther', 'referralOtherWrap'],
+    ['materialType', 'materialOtherWrap', 'Other'],
+    ['colorType', 'colorOtherWrap', 'Other']
+  ];
+
+  toggles.forEach(([controlId, wrapId, value]) => {
+    const control = document.getElementById(controlId);
+    const wrap = document.getElementById(wrapId);
+    const sync = () => {
+      const on = control.type === 'checkbox' ? control.checked : control.value === value;
+      wrap.classList.toggle('hidden', !on);
+    };
+    control.addEventListener('change', sync);
+    sync();
+  });
+
+  const designerInput = document.getElementById('designerInput');
+  const suggestionsEl = document.getElementById('designerSuggestions');
+  let activeIndex = -1;
+  let currentSuggestions = [];
+
+  function normalize(str){return String(str||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();}
+  function lev(a,b){const m=a.length,n=b.length,dp=Array.from({length:m+1},()=>Array(n+1).fill(0));for(let i=0;i<=m;i++)dp[i][0]=i;for(let j=0;j<=n;j++)dp[0][j]=j;for(let i=1;i<=m;i++){for(let j=1;j<=n;j++){const c=a[i-1]===b[j-1]?0:1;dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+c)}}return dp[m][n]}
+  function similarity(a,b){if(a===b)return 1;if(!a||!b)return 0;return 1-lev(a,b)/Math.max(a.length,b.length)}
+
+  function findSuggestions(term) {
+    const typed = normalize(term);
+    if (!typed) return [];
+    const aliasMap = config.aliasMap || {};
+    const designers = config.designers || [];
+
+    const scored = designers.map((name) => ({
+      name,
+      score: similarity(typed, normalize(name))
+    }));
+
+    if (aliasMap[typed]) {
+      scored.unshift({ name: aliasMap[typed], score: 1 });
+    }
+
+    return [...new Map(scored.sort((a,b)=>b.score-a.score).slice(0,7).map((x) => [x.name, x])).values()];
+  }
+
+  function renderSuggestions() {
+    suggestionsEl.innerHTML = '';
+    if (!currentSuggestions.length) {
+      suggestionsEl.classList.add('hidden');
+      designerInput.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    currentSuggestions.forEach((s, idx) => {
+      const li = document.createElement('li');
+      li.textContent = `${s.name} (${Math.round(s.score * 100)}%)`;
+      li.role = 'option';
+      li.classList.toggle('active', idx === activeIndex);
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        designerInput.value = s.name;
+        closeSuggestions();
+      });
+      suggestionsEl.appendChild(li);
+    });
+    suggestionsEl.classList.remove('hidden');
+    designerInput.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeSuggestions() {
+    activeIndex = -1;
+    currentSuggestions = [];
+    renderSuggestions();
+  }
+
+  designerInput.addEventListener('input', () => {
+    activeIndex = -1;
+    currentSuggestions = findSuggestions(designerInput.value);
+    renderSuggestions();
+  });
+
+  designerInput.addEventListener('keydown', (e) => {
+    if (!currentSuggestions.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = Math.min(currentSuggestions.length - 1, activeIndex + 1);
+      renderSuggestions();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(0, activeIndex - 1);
+      renderSuggestions();
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      designerInput.value = currentSuggestions[activeIndex].name;
+      closeSuggestions();
+    } else if (e.key === 'Escape') {
+      closeSuggestions();
+    }
+  });
+  designerInput.addEventListener('blur', () => setTimeout(closeSuggestions, 120));
+
+  function collectCheckboxGroup(name) {
+    return [...document.querySelectorAll(`[data-name="${name}"] input[type="checkbox"]:checked`)].map((x) => x.value);
+  }
+
+  function setStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.classList.remove('ok', 'err');
+    if (type) statusEl.classList.add(type);
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const payload = Object.fromEntries(formData.entries());
+    payload.consentAccepted = formData.get('consentAccepted') === 'on';
+    payload.itemsIncluded = collectCheckboxGroup('itemsIncluded');
+    payload.inspectionIssues = collectCheckboxGroup('inspectionIssues');
+    payload.referralSources = collectCheckboxGroup('referralSources');
+    payload.serviceRequested = collectCheckboxGroup('serviceRequested');
+
+    submitBtn.disabled = true;
+    setStatus('Saving intake...', null);
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        setStatus(res.message || 'Saved successfully.', 'ok');
+        form.reset();
+      })
+      .withFailureHandler((err) => {
+        setStatus(err && err.message ? err.message : 'Unable to submit intake.', 'err');
+      })
+      .withUserObject(null)
+      .submitIntake(payload);
+
+    setTimeout(() => { submitBtn.disabled = false; }, 800);
+  });
+})();
+</script>
