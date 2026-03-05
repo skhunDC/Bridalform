@@ -4,7 +4,10 @@
   body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f8;color:var(--text);position:relative}
   body::before{content:"";position:fixed;inset:0;z-index:-2;background:url('https://www.dublincleaners.com/wp-content/uploads/2026/03/BridalformBG.png') center/cover no-repeat;background-attachment:fixed;transform:translateZ(0)}
   body::after{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(246,248,255,.7),rgba(248,250,252,.78))}
-  .app-shell{max-width:980px;margin:auto;padding:1rem}
+  .ambient-flashes{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .ambient-flash{position:absolute;border-radius:999px;opacity:0;filter:blur(.4px);animation:flashPulse var(--flash-duration,3200ms) ease-out forwards;mix-blend-mode:screen}
+  @keyframes flashPulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}22%{opacity:var(--flash-opacity,.34)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.25)}}
+  .app-shell{max-width:980px;margin:auto;padding:1rem;position:relative;z-index:2}
   .hero{display:flex;gap:1rem;align-items:center;padding:1rem 0}.logo{width:72px;height:auto}
   .hero h1{margin:0;font-size:1.4rem}.hero p{margin:.25rem 0 0;color:var(--muted)}
   .card{background:rgba(255,255,255,.92);backdrop-filter:blur(1.2px);border:1px solid rgba(219,225,238,.95);border-radius:16px;padding:1rem;box-shadow:0 8px 30px rgba(20,30,70,.12)}
@@ -24,5 +27,6 @@
   .designer-wrap{position:relative}.suggestions{position:absolute;z-index:20;left:0;right:0;top:100%;list-style:none;margin:.2rem 0 0;padding:0;background:#fff;border:1px solid var(--line);border-radius:10px;max-height:220px;overflow:auto}
   .suggestions li{padding:.55rem .7rem;cursor:pointer}.suggestions li.active,.suggestions li:hover{background:#eef2ff}
   @supports (-webkit-overflow-scrolling:touch){body::before{background-attachment:scroll}}
+  @media (prefers-reduced-motion:reduce){.ambient-flashes{display:none}}
   @media (min-width:720px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.logo{width:92px}}
 </style>
