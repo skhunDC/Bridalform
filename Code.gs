@@ -1,5 +1,4 @@
 const CONFIG = {
-  authorizedUsers: ['skhun@dublincleaners.com', 'ss.sku@gmail.com'],
   emailRecipients: [
     'mbutler@dublincleaners.com',
     'bbutler@dublincleaners.com',
@@ -95,11 +94,8 @@ const FIELD_MAP = [
 const SHEET_HEADERS = FIELD_MAP.map((x) => x.header);
 
 function doGet() {
-  const user = getCurrentUserEmail_();
   const template = HtmlService.createTemplateFromFile('index');
   template.appConfig = {
-    userEmail: user,
-    authorized: isAuthorizedEmail_(user),
     designers: DESIGNER_CANONICAL,
     aliasMap: DESIGNER_ALIASES,
     matchThreshold: CONFIG.matchThreshold
@@ -127,10 +123,9 @@ function include(filename) {
 }
 
 function submitIntake(payload) {
-  const email = getCurrentUserEmail_();
-  if (!isAuthorizedEmail_(email)) throw new Error('Unauthorized access.');
+  const submittedBy = getCurrentUserEmail_();
 
-  enforceRateLimit_(email);
+  enforceRateLimit_(getRequesterIdentity_());
   if (payload && payload.website && String(payload.website).trim() !== '') throw new Error('Submission rejected.');
 
   const normalized = normalizePayload_(payload || {});
@@ -138,7 +133,7 @@ function submitIntake(payload) {
   if (validationError) throw new Error(validationError);
 
   normalized.submissionTimestamp = new Date();
-  normalized.submittedByEmail = email;
+  normalized.submittedByEmail = submittedBy;
 
   const sheet = getOrCreateSheet_();
   const row = FIELD_MAP.map((field) => toSheetValue_(normalized[field.key], field.type));
@@ -293,8 +288,8 @@ function getCurrentUserEmail_() {
   return String(Session.getActiveUser().getEmail() || '').toLowerCase().trim();
 }
 
-function isAuthorizedEmail_(email) {
-  return CONFIG.authorizedUsers.indexOf(String(email || '').toLowerCase()) !== -1;
+function getRequesterIdentity_() {
+  return getCurrentUserEmail_() || String(Session.getTemporaryActiveUserKey() || '').trim() || 'anonymous';
 }
 
 function formatPhone_(phone) {
