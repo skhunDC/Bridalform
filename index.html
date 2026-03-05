@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('styles'); ?>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <img class="logo" src="https://www.dublincleaners.com/wp-content/uploads/2024/12/Dublin-Logos-stacked.png" alt="Dublin Cleaners logo">
+        <div>
+          <h1>Wedding Gown Intake</h1>
+          <p>Premium care intake for bridal garments and accessories.</p>
+        </div>
+      </header>
+
+      <section id="unauthorizedView" class="card hidden" role="alert" aria-live="assertive">
+        <h2>Unauthorized</h2>
+        <p>Your Google account is not authorized for this app.</p>
+      </section>
+
+      <section id="appView" class="hidden">
+        <form id="intakeForm" class="card form-grid" novalidate>
+          <input type="text" name="website" class="honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <p id="status" class="status" aria-live="polite"></p>
+
+          <h2>Customer info</h2>
+          <label>Customer name* <input name="customerName" required></label>
+          <label>Phone* <input name="phone" required inputmode="tel"></label>
+          <label>Email* <input type="email" name="email" required></label>
+          <label>Bride first name <input name="brideFirstName"></label>
+          <label>Married last name <input name="marriedLastName"></label>
+          <label>Maiden last name <input name="maidenLastName"></label>
+          <label>Address <input name="address1"></label>
+          <label>City <input name="city"></label>
+          <label>State <input name="state"></label>
+          <label>ZIP <input name="zip"></label>
+
+          <h2>Wedding & gown basics</h2>
+          <label>Wedding date* <input type="date" name="weddingDate" required></label>
+          <label>Gown price <input name="gownPrice"></label>
+          <label>Number of pieces <input name="numberOfPieces" type="number" min="0"></label>
+
+          <label class="full designer-wrap">Label name / designer*
+            <input id="designerInput" name="designerInput" required autocomplete="off" aria-autocomplete="list" aria-controls="designerSuggestions" aria-expanded="false">
+            <ul id="designerSuggestions" role="listbox" class="suggestions hidden"></ul>
+          </label>
+
+          <h2>Items included</h2>
+          <fieldset class="full checks" data-name="itemsIncluded">
+            <label><input type="checkbox" value="Gown">Gown</label>
+            <label><input type="checkbox" value="Veil">Veil</label>
+            <label><input type="checkbox" value="Detachable straps/sleeves">Detachable straps/sleeves</label>
+            <label><input type="checkbox" value="Detachable skirt/train">Detachable skirt/train</label>
+            <label><input type="checkbox" value="Shrug/Shawl">Shrug/Shawl</label>
+            <label><input type="checkbox" value="Back tie/lace-up">Back tie/lace-up</label>
+            <label><input type="checkbox" value="Detachable bow">Detachable bow</label>
+            <label><input type="checkbox" value="Sash/Belt">Sash/Belt</label>
+            <label><input type="checkbox" value="Gloves">Gloves</label>
+            <label><input type="checkbox" value="Extra fabric">Extra fabric</label>
+            <label><input type="checkbox" value="Handkerchief">Handkerchief</label>
+            <label><input type="checkbox" value="Customer bag">Customer bag</label>
+            <label><input id="itemsOther" type="checkbox" value="Other">Other</label>
+          </fieldset>
+          <label id="itemsOtherTextWrap" class="full hidden">Other item details <input name="itemsOtherText"></label>
+
+          <h2>Materials & color</h2>
+          <label>Material type
+            <select name="materialType" id="materialType">
+              <option value="">Select</option><option>Silk</option><option>Synthetic</option><option>Combo</option><option>Other</option>
+            </select>
+          </label>
+          <label id="materialOtherWrap" class="hidden">Material other <input name="materialOtherText"></label>
+
+          <label>Color type
+            <select name="colorType" id="colorType">
+              <option value="">Select</option><option>White</option><option>Ivory</option><option>Other</option>
+            </select>
+          </label>
+          <label id="colorOtherWrap" class="hidden">Color other <input name="colorOtherText"></label>
+
+          <h2>Condition / notes</h2>
+          <fieldset class="full checks" data-name="inspectionIssues">
+            <label><input type="checkbox" value="Embellishments added after manufacture">Embellishments added after manufacture</label>
+            <label><input type="checkbox" value="Soil">Soil</label>
+            <label><input type="checkbox" value="Missing beads or buttons">Missing beads or buttons</label>
+            <label><input type="checkbox" value="Tears/rips/snags">Tears/rips/snags</label>
+            <label><input type="checkbox" value="Damage">Damage</label>
+          </fieldset>
+          <label class="full">Embellishments description <textarea name="embellishmentsAddedDescription"></textarea></label>
+          <label class="full">Comments <textarea name="comments"></textarea></label>
+
+          <h2>Operations</h2>
+          <label>Seamstress name <input name="seamstressName"></label>
+          <label>Bridal salon name <input name="bridalSalonName"></label>
+
+          <h2>Referral tracking</h2>
+          <fieldset class="full checks" data-name="referralSources">
+            <label><input type="checkbox" value="Existing customer">Existing customer</label>
+            <label><input type="checkbox" value="Website">Website</label>
+            <label><input type="checkbox" value="Internet">Internet</label>
+            <label><input type="checkbox" value="Bridal show">Bridal show</label>
+            <label><input type="checkbox" value="Columbus Weddings Magazine">Columbus Weddings Magazine</label>
+            <label><input type="checkbox" value="The Knot">The Knot</label>
+            <label><input type="checkbox" value="Wedding Wire">Wedding Wire</label>
+            <label><input type="checkbox" value="Friend">Friend</label>
+            <label><input id="referralOther" type="checkbox" value="Other">Other</label>
+          </fieldset>
+          <label id="referralOtherWrap" class="full hidden">Referral other <input name="referralOtherText"></label>
+
+          <h2>Services</h2>
+          <fieldset class="full checks" data-name="serviceRequested" required>
+            <label><input type="checkbox" value="Cleaned & Preserved">Cleaned & Preserved</label>
+            <label><input type="checkbox" value="Restoration/Preservation">Restoration/Preservation</label>
+            <label><input type="checkbox" value="Clean & Press">Clean & Press</label>
+            <label><input type="checkbox" value="Clean Only">Clean Only</label>
+            <label><input type="checkbox" value="Restoration Only">Restoration Only</label>
+            <label><input type="checkbox" value="Press Only">Press Only</label>
+            <label><input type="checkbox" value="Spot Clean">Spot Clean</label>
+          </fieldset>
+          <label>View before boxed
+            <select name="viewBeforeBoxed"><option value="">Select</option><option>Yes</option><option>No</option></select>
+          </label>
+          <label>Estimated cost <input name="estimatedCost"></label>
+
+          <h2>Consent + signature</h2>
+          <label class="full consent"><input type="checkbox" name="consentAccepted" required> I confirm this information is accurate and authorize service.</label>
+          <label>Typed signature* <input name="signatureName" required></label>
+          <label>Signature date* <input type="date" name="signatureDate" required></label>
+
+          <div class="full actions">
+            <button id="submitBtn" type="submit">Submit Intake</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script>window.__APP_CONFIG__ = <?!= JSON.stringify(appConfig) ?>;</script>
+    <?!= include('scripts'); ?>
+  </body>
+</html>
