@@ -5,6 +5,7 @@ const CONFIG = {
     'gbutler@dublincleaners.com'
   ],
   spreadsheetIdProperty: 'BRIDAL_INTAKE_SPREADSHEET_ID',
+  spreadsheetEditorsProperty: 'BRIDAL_INTAKE_ALLOWED_EDITOR_EMAILS',
   rateLimitWindowSec: 60,
   rateLimitMax: 10,
   matchThreshold: 0.78
@@ -327,9 +328,63 @@ function getOrCreateSheet_() {
   let sheet = ss.getSheetByName('Submissions');
   if (!sheet) sheet = ss.insertSheet('Submissions');
 
+  hardenSpreadsheetAccess_(ss, sheet);
+
   if (sheet.getLastRow() === 0) sheet.appendRow(SHEET_HEADERS);
 
   return sheet;
+}
+
+function hardenSpreadsheetAccess_(ss, sheet) {
+  const owner = ss.getOwner();
+  const ownerEmail = owner ? String(owner.getEmail() || '').toLowerCase().trim() : '';
+  const allowedEditors = getConfiguredAllowedEditors_();
+  const editorSet = {};
+
+  if (ownerEmail) editorSet[ownerEmail] = true;
+  for (let i = 0; i < allowedEditors.length; i++) editorSet[allowedEditors[i]] = true;
+
+  const editorEmails = Object.keys(editorSet);
+
+  ss.getEditors().forEach((user) => {
+    const email = String(user.getEmail() || '').toLowerCase().trim();
+    if (!editorSet[email]) ss.removeEditor(user);
+  });
+
+  ss.getViewers().forEach((user) => ss.removeViewer(user));
+
+  const file = DriveApp.getFileById(ss.getId());
+  file.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
+
+  const protection = sheet.protect().setDescription('Only approved staff and the app can edit intake data.');
+  const unprotectedRanges = protection.getUnprotectedRanges();
+  if (unprotectedRanges.length) protection.setUnprotectedRanges([]);
+  protection.setDomainEdit(false);
+
+  protection.getEditors().forEach((user) => {
+    const email = String(user.getEmail() || '').toLowerCase().trim();
+    if (!editorSet[email]) protection.removeEditor(user);
+  });
+
+  if (editorEmails.length) {
+    protection.addEditors(editorEmails);
+    ss.addEditors(editorEmails);
+  }
+}
+
+function getConfiguredAllowedEditors_() {
+  const raw = String(PropertiesService.getScriptProperties().getProperty(CONFIG.spreadsheetEditorsProperty) || '').trim();
+  if (!raw) return [];
+
+  const seen = {};
+  return raw
+    .split(',')
+    .map((email) => String(email || '').toLowerCase().trim())
+    .filter((email) => {
+      if (!email || seen[email]) return false;
+      seen[email] = true;
+      return true;
+    });
 }
 
 function buildPdf_(data) {
