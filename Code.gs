@@ -111,7 +111,19 @@ function doGet() {
 }
 
 function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  const rawName = String(filename || '').trim();
+  const normalizedName = rawName.replace(/\.html$/i, '');
+
+  if (!normalizedName) {
+    console.warn('include() called without a filename; returning empty content.');
+    return '';
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(normalizedName)) {
+    console.warn(`include() received invalid filename "${rawName}"; returning empty content.`);
+    return '';
+  }
+
+  return HtmlService.createHtmlOutputFromFile(normalizedName).getContent();
 }
 
 function submitIntake(payload) {
