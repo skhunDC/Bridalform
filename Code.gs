@@ -115,10 +115,12 @@ function include(filename) {
   const normalizedName = rawName.replace(/\.html$/i, '');
 
   if (!normalizedName) {
-    throw new Error('Template include filename is required.');
+    console.warn('include() called without a filename; returning empty content.');
+    return '';
   }
   if (!/^[A-Za-z0-9_-]+$/.test(normalizedName)) {
-    throw new Error(`Invalid template include filename: ${rawName}`);
+    console.warn(`include() received invalid filename "${rawName}"; returning empty content.`);
+    return '';
   }
 
   return HtmlService.createHtmlOutputFromFile(normalizedName).getContent();
