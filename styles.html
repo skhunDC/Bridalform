@@ -21,8 +21,8 @@
   .checks{display:grid;grid-template-columns:1fr;gap:.5rem;border:1px solid var(--line);border-radius:12px;padding:.8rem}
   .checks label{font-weight:500;display:flex;flex-direction:row;align-items:center;gap:.45rem}
   .full{grid-column:1/-1}.consent{background:#f8fbff;padding:.7rem;border-radius:10px;border:1px solid #c9dafd}
-  .actions{display:flex;justify-content:flex-end} button{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:.75rem 1rem;font-weight:700;cursor:pointer}
-  button[disabled]{opacity:.6;cursor:not-allowed}.status{min-height:1.25rem;margin:0;color:var(--muted)} .status.ok{color:var(--ok)} .status.err{color:var(--err)}
+  .actions{display:flex;justify-content:flex-end;gap:.65rem} button{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:.75rem 1rem;font-weight:700;cursor:pointer} .secondary{background:#e5e7eb;color:#111827}
+  button[disabled]{opacity:.6;cursor:not-allowed}.status{min-height:1.25rem;margin:0;color:var(--muted)} .status.ok{color:var(--ok)} .status.err{color:var(--err)} .draft-note{grid-column:1/-1;color:#7c2d12;font-size:.86rem;margin:0}
   .honeypot{position:absolute;left:-9999px;opacity:0;pointer-events:none}
   .designer-wrap{position:relative}.suggestions{position:absolute;z-index:20;left:0;right:0;top:100%;list-style:none;margin:.2rem 0 0;padding:0;background:#fff;border:1px solid var(--line);border-radius:10px;max-height:220px;overflow:auto}
   .suggestions li{padding:.55rem .7rem;cursor:pointer}.suggestions li.active,.suggestions li:hover{background:#eef2ff}

@@ -3,11 +3,14 @@
   <head>
     <meta charset="utf-8">
     <style>
-      body{font-family:Arial,sans-serif;color:#111;line-height:1.45;padding:24px}
-      h1{font-size:20px;margin:0 0 8px}
-      h2{font-size:14px;margin:18px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}
-      .row{margin:5px 0}
-      .k{font-weight:700;display:inline-block;min-width:220px}
+      @page { size: Letter; margin: 0.35in; }
+      body{font-family:Arial,sans-serif;color:#111;line-height:1.2;margin:0;font-size:9px}
+      h1{font-size:14px;margin:0 0 6px}
+      h2{font-size:10px;margin:8px 0 3px;background:#f3f4f6;padding:2px 4px}
+      table{width:100%;border-collapse:collapse;table-layout:fixed}
+      td{padding:2px 4px;vertical-align:top;border-bottom:1px solid #eee;word-wrap:break-word}
+      .k{font-weight:700;width:26%}
+      .v{width:24%}
     </style>
   </head>
   <body>
@@ -15,9 +18,20 @@
 
     <? for (let i = 0; i < sections.length; i++) { ?>
       <h2><?= sections[i].sectionName ?></h2>
-      <? for (let j = 0; j < sections[i].rows.length; j++) { ?>
-        <div class="row"><span class="k"><?= sections[i].rows[j].label ?>:</span> <?= sections[i].rows[j].value ?></div>
-      <? } ?>
+      <table>
+        <? for (let j = 0; j < sections[i].rows.length; j += 2) { ?>
+          <tr>
+            <td class="k"><?= sections[i].rows[j].label ?>:</td>
+            <td class="v"><?= sections[i].rows[j].value ?></td>
+            <? if (sections[i].rows[j + 1]) { ?>
+              <td class="k"><?= sections[i].rows[j + 1].label ?>:</td>
+              <td class="v"><?= sections[i].rows[j + 1].value ?></td>
+            <? } else { ?>
+              <td class="k"></td><td class="v"></td>
+            <? } ?>
+          </tr>
+        <? } ?>
+      </table>
     <? } ?>
   </body>
 </html>
