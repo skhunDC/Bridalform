@@ -2,10 +2,12 @@ const CONFIG = {
   emailRecipients: [
     'mbutler@dublincleaners.com',
     'bbutler@dublincleaners.com',
-    'gbutler@dublincleaners.com'
+    'gbutler@dublincleaners.com',
+    'dublincleanerstech@gmail.com'
   ],
   spreadsheetIdProperty: 'BRIDAL_INTAKE_SPREADSHEET_ID',
   spreadsheetEditorsProperty: 'BRIDAL_INTAKE_ALLOWED_EDITOR_EMAILS',
+  imageFolderIdProperty: 'BRIDAL_INTAKE_IMAGE_FOLDER_ID',
   rateLimitWindowSec: 60,
   rateLimitMax: 10,
   matchThreshold: 0.78
@@ -80,8 +82,12 @@ const FIELD_MAP = [
   { key: 'seamstressName', header: 'seamstressName', section: 'Operations', label: 'Seamstress name', type: 'text' },
   { key: 'bridalSalonName', header: 'bridalSalonName', section: 'Operations', label: 'Bridal salon name', type: 'text' },
 
-  { key: 'referralSources', header: 'referralSources', section: 'Referral tracking', label: 'Referral sources', type: 'array' },
-  { key: 'referralOtherText', header: 'referralOtherText', section: 'Referral tracking', label: 'Referral other text', type: 'text' },
+  { key: 'referralSources', header: 'referralSources', section: 'How did you hear about us?', label: 'Referral sources', type: 'array' },
+  { key: 'referralOtherText', header: 'referralOtherText', section: 'How did you hear about us?', label: 'Referral other text', type: 'text' },
+
+  { key: 'specialConcernDetails', header: 'specialConcernDetails', section: 'Special concerns', label: 'Special concern details', type: 'text' },
+  { key: 'specialConcernImageCount', header: 'specialConcernImageCount', section: 'Special concerns', label: 'Special concern image count', type: 'text' },
+  { key: 'specialConcernImageUrls', header: 'specialConcernImageUrls', section: 'Special concerns', label: 'Special concern image URLs', type: 'array' },
 
   { key: 'serviceRequested', header: 'serviceRequested', section: 'Services', label: 'Service requested', type: 'array' },
   { key: 'viewBeforeBoxed', header: 'viewBeforeBoxed', section: 'Services', label: 'View before boxed', type: 'text' },
@@ -133,8 +139,12 @@ function submitIntake(payload) {
   const validationError = validatePayload_(normalized);
   if (validationError) throw new Error(validationError);
 
+  const uploadedImageUrls = uploadSpecialConcernImages_(normalized.specialConcernImagesRaw, normalized.customerName);
+
   normalized.submissionTimestamp = new Date();
   normalized.submittedByEmail = submittedBy;
+  normalized.specialConcernImageUrls = uploadedImageUrls;
+  normalized.specialConcernImageCount = uploadedImageUrls.length;
 
   const sheet = getOrCreateSheet_();
   const row = FIELD_MAP.map((field) => toSheetValue_(normalized[field.key], field.type));
@@ -149,6 +159,11 @@ function submitIntake(payload) {
 function normalizePayload_(payload) {
   const clean = (val) => String(val || '').trim();
   const normalizeList = (arr) => Array.isArray(arr) ? arr.map((x) => clean(x)).filter(Boolean) : [];
+  const normalizeImageList_ = (arr) => Array.isArray(arr) ? arr.filter((img) => img && img.dataBase64).map((img) => ({
+    name: clean(img.name),
+    mimeType: clean(img.mimeType) || 'application/octet-stream',
+    dataBase64: clean(img.dataBase64)
+  })) : [];
 
   const designerMatch = findBestDesignerMatch_(clean(payload.designerInput));
 
@@ -190,6 +205,11 @@ function normalizePayload_(payload) {
     referralSources: normalizeList(payload.referralSources),
     referralOtherText: clean(payload.referralOtherText),
 
+    specialConcernDetails: clean(payload.specialConcernDetails),
+    specialConcernImagesRaw: normalizeImageList_(payload.specialConcernImages),
+    specialConcernImageUrls: [],
+    specialConcernImageCount: '',
+
     serviceRequested: normalizeList(payload.serviceRequested),
     viewBeforeBoxed: clean(payload.viewBeforeBoxed),
     estimatedCost: clean(payload.estimatedCost),
@@ -228,10 +248,12 @@ function toSheetValue_(value, type) {
 function buildPdfModel_(data) {
   const sections = {};
   FIELD_MAP.forEach((field) => {
+    const value = toSheetValue_(data[field.key], field.type);
+    if (value === '' || value === 'No') return;
     if (!sections[field.section]) sections[field.section] = [];
     sections[field.section].push({
       label: field.label,
-      value: toSheetValue_(data[field.key], field.type)
+      value: value
     });
   });
 
@@ -239,6 +261,46 @@ function buildPdfModel_(data) {
     sectionName: sectionName,
     rows: sections[sectionName]
   }));
+}
+
+
+function uploadSpecialConcernImages_(images, customerName) {
+  const safeImages = Array.isArray(images) ? images : [];
+  if (!safeImages.length) return [];
+  if (safeImages.length > 5) throw new Error('Please attach up to 5 images.');
+
+  const folder = getOrCreateImageFolder_();
+  const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+  const safeCustomerName = (customerName || 'customer').replace(/[^a-z0-9]/gi, '_');
+
+  return safeImages.map((img, idx) => {
+    const bytes = Utilities.base64Decode(img.dataBase64);
+    if (bytes.length > 5 * 1024 * 1024) throw new Error('Each image must be 5MB or smaller.');
+
+    const fileExt = String((img.mimeType || '').split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '');
+    const fileName = 'concern_' + safeCustomerName + '_' + stamp + '_' + (idx + 1) + '.' + (fileExt || 'bin');
+    const blob = Utilities.newBlob(bytes, img.mimeType || 'application/octet-stream', fileName);
+    const file = folder.createFile(blob);
+    return file.getUrl();
+  });
+}
+
+function getOrCreateImageFolder_() {
+  const props = PropertiesService.getScriptProperties();
+  const existingId = String(props.getProperty(CONFIG.imageFolderIdProperty) || '').trim();
+
+  if (existingId) {
+    try {
+      return DriveApp.getFolderById(existingId);
+    } catch (err) {
+      // fall through and recreate
+    }
+  }
+
+  const folder = DriveApp.createFolder('Dublin Cleaners - Bridal Intake Images');
+  folder.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
+  props.setProperty(CONFIG.imageFolderIdProperty, folder.getId());
+  return folder;
 }
 
 function findBestDesignerMatch_(input) {
@@ -410,6 +472,8 @@ function sendNotificationEmail_(data, pdfBlob) {
     'Items Included: ' + (data.itemsIncluded || []).join(', '),
     'View Before Boxed: ' + data.viewBeforeBoxed,
     'Estimated Cost: ' + data.estimatedCost,
+    'Special Concern Notes: ' + data.specialConcernDetails,
+    'Special Concern Images: ' + (data.specialConcernImageUrls || []).join(', '),
     '',
     'Signature: ' + data.signatureName + ' on ' + data.signatureDate
   ].join('\n');

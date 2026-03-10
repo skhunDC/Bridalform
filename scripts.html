@@ -4,6 +4,10 @@
   const form = document.getElementById('intakeForm');
   const statusEl = document.getElementById('status');
   const submitBtn = document.getElementById('submitBtn');
+  const clearDraftBtn = document.getElementById('clearDraftBtn');
+  const imageDraftNote = document.getElementById('imageDraftNote');
+  const concernImageInput = document.getElementById('specialConcernImages');
+  const draftKey = 'bridalIntakeDraft.v1';
 
   const flashPalette = [
     'rgba(255, 248, 233, 0.42)',
@@ -90,14 +94,14 @@
     sync();
   });
 
+  function normalize(str){return String(str||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();}
+  function lev(a,b){const m=a.length,n=b.length,dp=Array.from({length:m+1},()=>Array(n+1).fill(0));for(let i=0;i<=m;i++)dp[i][0]=i;for(let j=0;j<=n;j++)dp[0][j]=j;for(let i=1;i<=m;i++){for(let j=1;j<=n;j++){const c=a[i-1]===b[j-1]?0:1;dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+c)}}return dp[m][n];}
+  function similarity(a,b){if(a===b)return 1;if(!a||!b)return 0;return 1-lev(a,b)/Math.max(a.length,b.length);}
+
   const designerInput = document.getElementById('designerInput');
   const suggestionsEl = document.getElementById('designerSuggestions');
   let activeIndex = -1;
   let currentSuggestions = [];
-
-  function normalize(str){return String(str||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();}
-  function lev(a,b){const m=a.length,n=b.length,dp=Array.from({length:m+1},()=>Array(n+1).fill(0));for(let i=0;i<=m;i++)dp[i][0]=i;for(let j=0;j<=n;j++)dp[0][j]=j;for(let i=1;i<=m;i++){for(let j=1;j<=n;j++){const c=a[i-1]===b[j-1]?0:1;dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+c)}}return dp[m][n]}
-  function similarity(a,b){if(a===b)return 1;if(!a||!b)return 0;return 1-lev(a,b)/Math.max(a.length,b.length)}
 
   function findSuggestions(term) {
     const typed = normalize(term);
@@ -105,15 +109,8 @@
     const aliasMap = config.aliasMap || {};
     const designers = config.designers || [];
 
-    const scored = designers.map((name) => ({
-      name,
-      score: similarity(typed, normalize(name))
-    }));
-
-    if (aliasMap[typed]) {
-      scored.unshift({ name: aliasMap[typed], score: 1 });
-    }
-
+    const scored = designers.map((name) => ({ name, score: similarity(typed, normalize(name)) }));
+    if (aliasMap[typed]) scored.unshift({ name: aliasMap[typed], score: 1 });
     return [...new Map(scored.sort((a,b)=>b.score-a.score).slice(0,7).map((x) => [x.name, x])).values()];
   }
 
@@ -182,31 +179,116 @@
     if (type) statusEl.classList.add(type);
   }
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  function createDraftSnapshot() {
     const formData = new FormData(form);
-    const payload = Object.fromEntries(formData.entries());
-    payload.consentAccepted = formData.get('consentAccepted') === 'on';
-    payload.itemsIncluded = collectCheckboxGroup('itemsIncluded');
-    payload.inspectionIssues = collectCheckboxGroup('inspectionIssues');
-    payload.referralSources = collectCheckboxGroup('referralSources');
-    payload.serviceRequested = collectCheckboxGroup('serviceRequested');
+    const snapshot = Object.fromEntries(formData.entries());
+    snapshot.consentAccepted = formData.get('consentAccepted') === 'on';
+    snapshot.itemsIncluded = collectCheckboxGroup('itemsIncluded');
+    snapshot.inspectionIssues = collectCheckboxGroup('inspectionIssues');
+    snapshot.referralSources = collectCheckboxGroup('referralSources');
+    snapshot.serviceRequested = collectCheckboxGroup('serviceRequested');
+    delete snapshot.specialConcernImages;
+    return snapshot;
+  }
+
+  function saveDraft() {
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ savedAt: new Date().toISOString(), data: createDraftSnapshot() }));
+    } catch (err) {
+      // Ignore storage issues to avoid interrupting the form.
+    }
+  }
+
+  function restoreDraft() {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const data = parsed && parsed.data ? parsed.data : {};
+
+      Object.entries(data).forEach(([key, value]) => {
+        const el = form.elements.namedItem(key);
+        if (!el || Array.isArray(value) || typeof value === 'boolean') return;
+        el.value = value;
+      });
+
+      ['itemsIncluded', 'inspectionIssues', 'referralSources', 'serviceRequested'].forEach((groupName) => {
+        const selected = Array.isArray(data[groupName]) ? data[groupName] : [];
+        const boxes = document.querySelectorAll(`[data-name="${groupName}"] input[type="checkbox"]`);
+        boxes.forEach((box) => {
+          box.checked = selected.includes(box.value);
+        });
+      });
+
+      const consent = form.elements.namedItem('consentAccepted');
+      if (consent) consent.checked = Boolean(data.consentAccepted);
+
+      form.dispatchEvent(new Event('change'));
+      setStatus('Draft restored from this device.', null);
+    } catch (err) {
+      // Ignore corrupt drafts.
+    }
+  }
+
+  function clearDraft() {
+    localStorage.removeItem(draftKey);
+    setStatus('Saved draft cleared on this device.', null);
+  }
+
+  async function fileToPayload(file) {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error(`Unable to read ${file.name}`));
+      reader.readAsDataURL(file);
+    });
+
+    return {
+      name: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      dataBase64: dataUrl.split(',')[1] || ''
+    };
+  }
+
+  async function collectImagePayloads() {
+    const files = concernImageInput && concernImageInput.files ? [...concernImageInput.files] : [];
+    if (!files.length) return [];
+    if (files.length > 5) throw new Error('Please attach up to 5 images.');
+    return Promise.all(files.map(fileToPayload));
+  }
+
+  form.addEventListener('input', saveDraft);
+  form.addEventListener('change', saveDraft);
+  if (clearDraftBtn) clearDraftBtn.addEventListener('click', clearDraft);
+  if (imageDraftNote) imageDraftNote.classList.remove('hidden');
+
+  restoreDraft();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
     submitBtn.disabled = true;
     setStatus('Saving intake...', null);
 
-    google.script.run
-      .withSuccessHandler((res) => {
-        setStatus(res.message || 'Saved successfully.', 'ok');
-        form.reset();
-      })
-      .withFailureHandler((err) => {
-        setStatus(err && err.message ? err.message : 'Unable to submit intake.', 'err');
-      })
-      .withUserObject(null)
-      .submitIntake(payload);
+    try {
+      const payload = createDraftSnapshot();
+      payload.specialConcernImages = await collectImagePayloads();
 
-    setTimeout(() => { submitBtn.disabled = false; }, 800);
+      google.script.run
+        .withSuccessHandler((res) => {
+          setStatus(res.message || 'Saved successfully.', 'ok');
+          form.reset();
+          clearDraft();
+        })
+        .withFailureHandler((err) => {
+          setStatus(err && err.message ? err.message : 'Unable to submit intake.', 'err');
+        })
+        .submitIntake(payload);
+    } catch (err) {
+      setStatus(err && err.message ? err.message : 'Unable to process images.', 'err');
+    } finally {
+      setTimeout(() => { submitBtn.disabled = false; }, 800);
+    }
   });
 })();
 </script>

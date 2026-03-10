@@ -22,6 +22,6 @@ test('normalize payload keeps required structures', () => {
 });
 
 test('field map preserves one-to-one schema uniqueness', () => {
-  assert.equal(FIELD_MAP.length, 37);
+  assert.equal(FIELD_MAP.length, 40);
   assert.equal(new Set(FIELD_MAP).size, FIELD_MAP.length);
 });

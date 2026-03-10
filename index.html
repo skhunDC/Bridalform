@@ -89,7 +89,7 @@
           <label>Seamstress name <input name="seamstressName"></label>
           <label>Bridal salon name <input name="bridalSalonName"></label>
 
-          <h2>Referral tracking</h2>
+          <h2>How did you hear about us? (check all that apply)</h2>
           <fieldset class="full checks" data-name="referralSources">
             <label><input type="checkbox" value="Existing customer">Existing customer</label>
             <label><input type="checkbox" value="Website">Website</label>
@@ -102,6 +102,13 @@
             <label><input id="referralOther" type="checkbox" value="Other">Other</label>
           </fieldset>
           <label id="referralOtherWrap" class="full hidden">Referral other <input name="referralOtherText"></label>
+
+          <h2>Special concerns or conditions</h2>
+          <label class="full">Concern details <textarea name="specialConcernDetails" placeholder="Share any areas you want us to inspect carefully."></textarea></label>
+          <label class="full">Upload images (optional, you can select multiple)
+            <input id="specialConcernImages" type="file" name="specialConcernImages" accept="image/*" multiple>
+          </label>
+          <p id="imageDraftNote" class="draft-note hidden">Drafts save text and selections on this device. For security, images are not stored in draft and must be reattached before final submit.</p>
 
           <h2>Services</h2>
           <fieldset class="full checks" data-name="serviceRequested" required>
@@ -124,6 +131,7 @@
           <label>Signature date* <input type="date" name="signatureDate" required></label>
 
           <div class="full actions">
+            <button id="clearDraftBtn" type="button" class="secondary">Clear Draft</button>
             <button id="submitBtn" type="submit">Submit Intake</button>
           </div>
         </form>
