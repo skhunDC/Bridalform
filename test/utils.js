@@ -12,7 +12,7 @@ const FIELD_MAP = [
   'submissionTimestamp','submittedByEmail','customerName','phone','email','brideFirstName','marriedLastName','maidenLastName','address1','city','state','zip',
   'weddingDate','gownPrice','numberOfPieces','designerInput','designerCanonical','designerMatchScore','itemsIncluded','itemsOtherText',
   'materialType','materialOtherText','colorType','colorOtherText','inspectionIssues','embellishmentsAddedDescription','comments','seamstressName','bridalSalonName',
-  'referralSources','referralOtherText','specialConcernDetails','specialConcernImageCount','specialConcernImageUrls','serviceRequested','viewBeforeBoxed','estimatedCost','consentAccepted','signatureName','signatureDate'
+  'referralSources','referralOtherText','specialConcernDetails','specialConcernImageCount','specialConcernImageUrls','serviceRequested','viewBeforeBoxed','consentAccepted','signatureName','signatureDate'
 ];
 
 function normalizeKey(str){return String(str||'').toLowerCase().replace(/[^a-z0-9]/g,' ').replace(/\s+/g,' ').trim();}

@@ -7,7 +7,6 @@ const CONFIG = {
   ],
   spreadsheetIdProperty: 'BRIDAL_INTAKE_SPREADSHEET_ID',
   spreadsheetEditorsProperty: 'BRIDAL_INTAKE_ALLOWED_EDITOR_EMAILS',
-  imageFolderIdProperty: 'BRIDAL_INTAKE_IMAGE_FOLDER_ID',
   rateLimitWindowSec: 60,
   rateLimitMax: 10,
   matchThreshold: 0.78
@@ -91,8 +90,6 @@ const FIELD_MAP = [
 
   { key: 'serviceRequested', header: 'serviceRequested', section: 'Services', label: 'Service requested', type: 'array' },
   { key: 'viewBeforeBoxed', header: 'viewBeforeBoxed', section: 'Services', label: 'View before boxed', type: 'text' },
-  { key: 'estimatedCost', header: 'estimatedCost', section: 'Services', label: 'Estimated cost', type: 'text' },
-
   { key: 'consentAccepted', header: 'consentAccepted', section: 'Consent + signature', label: 'Consent accepted', type: 'boolean' },
   { key: 'signatureName', header: 'signatureName', section: 'Consent + signature', label: 'Signature name', type: 'text' },
   { key: 'signatureDate', header: 'signatureDate', section: 'Consent + signature', label: 'Signature date', type: 'text' }
@@ -139,19 +136,19 @@ function submitIntake(payload) {
   const validationError = validatePayload_(normalized);
   if (validationError) throw new Error(validationError);
 
-  const uploadedImageUrls = uploadSpecialConcernImages_(normalized.specialConcernImagesRaw, normalized.customerName);
+  const preparedImages = prepareSpecialConcernImages_(normalized.specialConcernImagesRaw, normalized.customerName);
 
   normalized.submissionTimestamp = new Date();
   normalized.submittedByEmail = submittedBy;
-  normalized.specialConcernImageUrls = uploadedImageUrls;
-  normalized.specialConcernImageCount = uploadedImageUrls.length;
+  normalized.specialConcernImageUrls = preparedImages.labels;
+  normalized.specialConcernImageCount = preparedImages.labels.length;
 
   const sheet = getOrCreateSheet_();
   const row = FIELD_MAP.map((field) => toSheetValue_(normalized[field.key], field.type));
   sheet.appendRow(row);
 
   const pdfBlob = buildPdf_(normalized);
-  sendNotificationEmail_(normalized, pdfBlob);
+  sendNotificationEmail_(normalized, pdfBlob, preparedImages.attachments);
 
   return { ok: true, message: 'Submission saved and emailed successfully.' };
 }
@@ -212,8 +209,6 @@ function normalizePayload_(payload) {
 
     serviceRequested: normalizeList(payload.serviceRequested),
     viewBeforeBoxed: clean(payload.viewBeforeBoxed),
-    estimatedCost: clean(payload.estimatedCost),
-
     consentAccepted: Boolean(payload.consentAccepted),
     signatureName: clean(payload.signatureName),
     signatureDate: clean(payload.signatureDate)
@@ -264,43 +259,29 @@ function buildPdfModel_(data) {
 }
 
 
-function uploadSpecialConcernImages_(images, customerName) {
+function prepareSpecialConcernImages_(images, customerName) {
   const safeImages = Array.isArray(images) ? images : [];
-  if (!safeImages.length) return [];
+  if (!safeImages.length) return { labels: [], attachments: [] };
   if (safeImages.length > 5) throw new Error('Please attach up to 5 images.');
 
-  const folder = getOrCreateImageFolder_();
   const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
   const safeCustomerName = (customerName || 'customer').replace(/[^a-z0-9]/gi, '_');
 
-  return safeImages.map((img, idx) => {
+  const labels = [];
+  const attachments = safeImages.map((img, idx) => {
     const bytes = Utilities.base64Decode(img.dataBase64);
     if (bytes.length > 5 * 1024 * 1024) throw new Error('Each image must be 5MB or smaller.');
 
     const fileExt = String((img.mimeType || '').split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '');
     const fileName = 'concern_' + safeCustomerName + '_' + stamp + '_' + (idx + 1) + '.' + (fileExt || 'bin');
-    const blob = Utilities.newBlob(bytes, img.mimeType || 'application/octet-stream', fileName);
-    const file = folder.createFile(blob);
-    return file.getUrl();
+    labels.push(fileName);
+    return Utilities.newBlob(bytes, img.mimeType || 'application/octet-stream', fileName);
   });
-}
 
-function getOrCreateImageFolder_() {
-  const props = PropertiesService.getScriptProperties();
-  const existingId = String(props.getProperty(CONFIG.imageFolderIdProperty) || '').trim();
-
-  if (existingId) {
-    try {
-      return DriveApp.getFolderById(existingId);
-    } catch (err) {
-      // fall through and recreate
-    }
-  }
-
-  const folder = DriveApp.createFolder('Dublin Cleaners - Bridal Intake Images');
-  folder.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
-  props.setProperty(CONFIG.imageFolderIdProperty, folder.getId());
-  return folder;
+  return {
+    labels: labels,
+    attachments: attachments
+  };
 }
 
 function findBestDesignerMatch_(input) {
@@ -415,9 +396,6 @@ function hardenSpreadsheetAccess_(ss, sheet) {
 
   ss.getViewers().forEach((user) => ss.removeViewer(user));
 
-  const file = DriveApp.getFileById(ss.getId());
-  file.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
-
   const protection = sheet.protect().setDescription('Only approved staff and the app can edit intake data.');
   const unprotectedRanges = protection.getUnprotectedRanges();
   if (unprotectedRanges.length) protection.setUnprotectedRanges([]);
@@ -457,7 +435,7 @@ function buildPdf_(data) {
   return Utilities.newBlob(html, 'text/html', 'intake.html').getAs(MimeType.PDF).setName('Dublin_Cleaners_Intake_' + safeName + '.pdf');
 }
 
-function sendNotificationEmail_(data, pdfBlob) {
+function sendNotificationEmail_(data, pdfBlob, imageAttachments) {
   const subject = 'Wedding Gown Intake - ' + data.customerName;
   const body = [
     'New bridal intake submission received.',
@@ -471,7 +449,6 @@ function sendNotificationEmail_(data, pdfBlob) {
     'Services: ' + (data.serviceRequested || []).join(', '),
     'Items Included: ' + (data.itemsIncluded || []).join(', '),
     'View Before Boxed: ' + data.viewBeforeBoxed,
-    'Estimated Cost: ' + data.estimatedCost,
     'Special Concern Notes: ' + data.specialConcernDetails,
     'Special Concern Images: ' + (data.specialConcernImageUrls || []).join(', '),
     '',
@@ -483,6 +460,6 @@ function sendNotificationEmail_(data, pdfBlob) {
     subject: subject,
     body: body,
     replyTo: data.email || undefined,
-    attachments: [pdfBlob]
+    attachments: [pdfBlob].concat(Array.isArray(imageAttachments) ? imageAttachments : [])
   });
 }
