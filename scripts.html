@@ -10,6 +10,21 @@
   const imageDraftNote = document.getElementById('imageDraftNote');
   const concernImageInput = document.getElementById('specialConcernImages');
   const draftKey = 'bridalIntakeDraft.v1';
+  const draftSaveDelays = { input: 700, change: 250 };
+
+  let draftSaveTimer = null;
+  let lastSavedSnapshotJson = '';
+
+  const shouldUsePerformanceLiteMode = () => {
+    const coarsePointer = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const touchDevice = navigator.maxTouchPoints > 1;
+    const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    const compactViewport = window.innerWidth <= 1024;
+    return reducedMotion || (compactViewport && (coarsePointer || touchDevice || mobileUserAgent));
+  };
+
+  if (shouldUsePerformanceLiteMode()) document.body.classList.add('perf-lite');
 
   const flashPalette = [
     'rgba(255, 248, 233, 0.42)',
@@ -22,6 +37,8 @@
   flashLayer.className = 'ambient-flashes';
   flashLayer.setAttribute('aria-hidden', 'true');
   document.body.insertBefore(flashLayer, document.body.firstChild);
+
+  const shouldDisableAmbientEffects = () => shouldUsePerformanceLiteMode();
 
   function getFormRectWithPadding() {
     const rect = form.getBoundingClientRect();
@@ -71,12 +88,16 @@
   }
 
   function scheduleAmbientFlash() {
+    if (shouldDisableAmbientEffects()) {
+      flashLayer.replaceChildren();
+      return;
+    }
     createAmbientFlash();
     const next = 900 + Math.random() * 1700;
     window.setTimeout(scheduleAmbientFlash, next);
   }
 
-  scheduleAmbientFlash();
+  if (!shouldDisableAmbientEffects()) scheduleAmbientFlash();
 
   const toggles = [
     ['itemsOther', 'itemsOtherTextWrap'],
@@ -213,12 +234,33 @@
     return snapshot;
   }
 
-  function saveDraft() {
+  function persistDraftNow() {
     try {
-      localStorage.setItem(draftKey, JSON.stringify({ savedAt: new Date().toISOString(), data: createDraftSnapshot() }));
+      const snapshot = createDraftSnapshot();
+      const snapshotJson = JSON.stringify(snapshot);
+      if (snapshotJson === lastSavedSnapshotJson) return;
+      const payload = JSON.stringify({ savedAt: new Date().toISOString(), data: snapshot });
+      localStorage.setItem(draftKey, payload);
+      lastSavedSnapshotJson = snapshotJson;
     } catch (err) {
       // Ignore storage issues to avoid interrupting the form.
     }
+  }
+
+  function scheduleDraftSave(delay = draftSaveDelays.input) {
+    if (draftSaveTimer) clearTimeout(draftSaveTimer);
+    draftSaveTimer = window.setTimeout(() => {
+      draftSaveTimer = null;
+      persistDraftNow();
+    }, delay);
+  }
+
+  function flushDraftSave() {
+    if (draftSaveTimer) {
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = null;
+    }
+    persistDraftNow();
   }
 
   function restoreDraft() {
@@ -226,6 +268,7 @@
       const raw = localStorage.getItem(draftKey);
       if (!raw) return;
       const parsed = JSON.parse(raw);
+      lastSavedSnapshotJson = JSON.stringify((parsed && parsed.data) || {});
       const data = parsed && parsed.data ? parsed.data : {};
 
       Object.entries(data).forEach(([key, value]) => {
@@ -253,7 +296,12 @@
   }
 
   function clearDraft() {
+    if (draftSaveTimer) {
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = null;
+    }
     localStorage.removeItem(draftKey);
+    lastSavedSnapshotJson = '';
     setStatus('Saved draft cleared on this device.', null);
   }
 
@@ -279,8 +327,13 @@
     return Promise.all(files.map(fileToPayload));
   }
 
-  form.addEventListener('input', saveDraft);
-  form.addEventListener('change', saveDraft);
+  form.addEventListener('input', () => scheduleDraftSave(draftSaveDelays.input));
+  form.addEventListener('change', () => scheduleDraftSave(draftSaveDelays.change));
+  form.addEventListener('blur', () => scheduleDraftSave(0), true);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushDraftSave();
+  });
+  window.addEventListener('pagehide', flushDraftSave);
   if (clearDraftBtn) clearDraftBtn.addEventListener('click', clearDraft);
   if (submitAnotherBtn) submitAnotherBtn.addEventListener('click', showFormView);
   if (imageDraftNote) imageDraftNote.classList.remove('hidden');

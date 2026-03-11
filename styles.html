@@ -31,6 +31,15 @@
   .confirmation h2{margin:.4rem 0;font-size:1.3rem;color:#14532d}
   .confirmation p{margin:0;color:#1f2937}
   .confirmation-badge{display:inline-flex;align-items:center;gap:.35rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;background:#166534;color:#fff;padding:.35rem .7rem;border-radius:999px;margin:0 auto .5rem}
+  body.perf-lite::before{display:none}
+  body.perf-lite::after{background:linear-gradient(180deg,#f7f8fb,#f3f4f8)}
+  body.perf-lite .ambient-flashes{display:none}
+  body.perf-lite .card{backdrop-filter:none;box-shadow:0 3px 12px rgba(20,30,70,.08)}
+  @media (hover:none) and (pointer:coarse){
+    body::before{background-attachment:scroll;transform:none}
+    .card{backdrop-filter:none;box-shadow:0 3px 12px rgba(20,30,70,.08)}
+    .ambient-flashes{display:none}
+  }
   @supports (-webkit-overflow-scrolling:touch){body::before{background-attachment:scroll}}
   @media (prefers-reduced-motion:reduce){.ambient-flashes{display:none}}
   @media (min-width:720px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.logo{width:92px}}
