@@ -5,6 +5,8 @@
   const statusEl = document.getElementById('status');
   const submitBtn = document.getElementById('submitBtn');
   const clearDraftBtn = document.getElementById('clearDraftBtn');
+  const successView = document.getElementById('successView');
+  const submitAnotherBtn = document.getElementById('submitAnotherBtn');
   const imageDraftNote = document.getElementById('imageDraftNote');
   const concernImageInput = document.getElementById('specialConcernImages');
   const draftKey = 'bridalIntakeDraft.v1';
@@ -179,6 +181,26 @@
     if (type) statusEl.classList.add(type);
   }
 
+
+  function showSuccessView(message) {
+    form.classList.add('hidden');
+    if (successView) {
+      successView.classList.remove('hidden');
+      const heading = successView.querySelector('h2');
+      if (heading && message) heading.textContent = message;
+      successView.focus();
+      successView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function showFormView() {
+    if (successView) successView.classList.add('hidden');
+    form.classList.remove('hidden');
+    form.reset();
+    setStatus('', null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function createDraftSnapshot() {
     const formData = new FormData(form);
     const snapshot = Object.fromEntries(formData.entries());
@@ -260,6 +282,7 @@
   form.addEventListener('input', saveDraft);
   form.addEventListener('change', saveDraft);
   if (clearDraftBtn) clearDraftBtn.addEventListener('click', clearDraft);
+  if (submitAnotherBtn) submitAnotherBtn.addEventListener('click', showFormView);
   if (imageDraftNote) imageDraftNote.classList.remove('hidden');
 
   restoreDraft();
@@ -279,6 +302,7 @@
           setStatus(res.message || 'Saved successfully.', 'ok');
           form.reset();
           clearDraft();
+          showSuccessView('Your bridal intake has been sent successfully.');
         })
         .withFailureHandler((err) => {
           setStatus(err && err.message ? err.message : 'Unable to submit intake.', 'err');
