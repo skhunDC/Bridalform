@@ -23,6 +23,11 @@
   flashLayer.setAttribute('aria-hidden', 'true');
   document.body.insertBefore(flashLayer, document.body.firstChild);
 
+  const shouldDisableAmbientEffects = () => (
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    window.matchMedia('(hover: none) and (pointer: coarse)').matches
+  );
+
   function getFormRectWithPadding() {
     const rect = form.getBoundingClientRect();
     return {
@@ -71,12 +76,16 @@
   }
 
   function scheduleAmbientFlash() {
+    if (shouldDisableAmbientEffects()) {
+      flashLayer.replaceChildren();
+      return;
+    }
     createAmbientFlash();
     const next = 900 + Math.random() * 1700;
     window.setTimeout(scheduleAmbientFlash, next);
   }
 
-  scheduleAmbientFlash();
+  if (!shouldDisableAmbientEffects()) scheduleAmbientFlash();
 
   const toggles = [
     ['itemsOther', 'itemsOtherTextWrap'],
