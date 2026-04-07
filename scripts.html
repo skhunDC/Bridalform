@@ -9,6 +9,7 @@
   const submitAnotherBtn = document.getElementById('submitAnotherBtn');
   const imageDraftNote = document.getElementById('imageDraftNote');
   const concernImageInput = document.getElementById('specialConcernImages');
+  const submitBtnDefaultLabel = submitBtn ? submitBtn.textContent : 'Submit Intake';
   const draftKey = 'bridalIntakeDraft.v1';
   const draftSaveDelays = { input: 700, change: 250 };
 
@@ -25,18 +26,6 @@
   };
 
   if (shouldUsePerformanceLiteMode()) document.body.classList.add('perf-lite');
-
-  const shouldUsePerformanceLiteMode = () => {
-    const coarsePointer = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const touchDevice = navigator.maxTouchPoints > 1;
-    const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
-    const compactViewport = window.innerWidth <= 1024;
-    return reducedMotion || (compactViewport && (coarsePointer || touchDevice || mobileUserAgent));
-  };
-
-  if (shouldUsePerformanceLiteMode()) document.body.classList.add('perf-lite');
-
   const flashPalette = [
     'rgba(255, 248, 233, 0.42)',
     'rgba(250, 234, 202, 0.4)',
@@ -214,6 +203,14 @@
   }
 
 
+  function setSubmittingState(isSubmitting) {
+    if (!submitBtn) return;
+    submitBtn.disabled = isSubmitting;
+    submitBtn.classList.toggle('is-submitting', isSubmitting);
+    submitBtn.setAttribute('aria-busy', isSubmitting ? 'true' : 'false');
+    submitBtn.textContent = isSubmitting ? 'Submitting intake…' : submitBtnDefaultLabel;
+  }
+
   function showSuccessView(message) {
     form.classList.add('hidden');
     if (successView) {
@@ -354,8 +351,8 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    submitBtn.disabled = true;
-    setStatus('Saving intake...', null);
+    setSubmittingState(true);
+    setStatus('Submitting intake… please wait while we save your form, generate the PDF, and send email.', null);
 
     try {
       const payload = createDraftSnapshot();
@@ -363,19 +360,20 @@
 
       google.script.run
         .withSuccessHandler((res) => {
+          setSubmittingState(false);
           setStatus(res.message || 'Saved successfully.', 'ok');
           form.reset();
           clearDraft();
-          showSuccessView('Your bridal intake has been sent successfully.');
+          showSuccessView(res.message || 'Your bridal intake has been sent successfully.');
         })
         .withFailureHandler((err) => {
+          setSubmittingState(false);
           setStatus(err && err.message ? err.message : 'Unable to submit intake.', 'err');
         })
         .submitIntake(payload);
     } catch (err) {
+      setSubmittingState(false);
       setStatus(err && err.message ? err.message : 'Unable to process images.', 'err');
-    } finally {
-      setTimeout(() => { submitBtn.disabled = false; }, 800);
     }
   });
 })();
