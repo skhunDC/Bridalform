@@ -3,6 +3,7 @@ const CONFIG = {
     'mbutler@dublincleaners.com',
     'bbutler@dublincleaners.com',
     'gbutler@dublincleaners.com',
+    'skhun@dublincleaners.com',
     'dublincleanerstech@gmail.com'
   ],
   spreadsheetIdProperty: 'BRIDAL_INTAKE_SPREADSHEET_ID',
