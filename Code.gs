@@ -3,6 +3,7 @@ const CONFIG = {
     'mbutler@dublincleaners.com',
     'bbutler@dublincleaners.com',
     'gbutler@dublincleaners.com',
+    'skhun@dublincleaners.com',
     'dublincleanerstech@gmail.com'
   ],
   spreadsheetIdProperty: 'BRIDAL_INTAKE_SPREADSHEET_ID',
@@ -455,11 +456,45 @@ function sendNotificationEmail_(data, pdfBlob, imageAttachments) {
     'Signature: ' + data.signatureName + ' on ' + data.signatureDate
   ].join('\n');
 
-  MailApp.sendEmail({
-    to: CONFIG.emailRecipients.join(','),
+  const recipients = getValidRecipientEmails_(CONFIG.emailRecipients);
+  if (!recipients.length) throw new Error('No valid notification recipient addresses are configured.');
+
+  const mailOptions = {
+    to: recipients.join(','),
     subject: subject,
     body: body,
-    replyTo: data.email || undefined,
     attachments: [pdfBlob].concat(Array.isArray(imageAttachments) ? imageAttachments : [])
-  });
+  };
+
+  if (isValidEmail_(data.email)) mailOptions.replyTo = data.email;
+
+  try {
+    MailApp.sendEmail(mailOptions);
+  } catch (err) {
+    const details = err && err.message ? err.message : String(err);
+    console.error('Primary email send failed. Retrying without reply-to. Details: ' + details);
+    delete mailOptions.replyTo;
+    MailApp.sendEmail(mailOptions);
+  }
+}
+
+function getValidRecipientEmails_(rawRecipients) {
+  const list = Array.isArray(rawRecipients) ? rawRecipients : [];
+  const seen = {};
+  const valid = [];
+
+  for (let i = 0; i < list.length; i++) {
+    const email = String(list[i] || '').toLowerCase().trim();
+    if (!email || seen[email]) continue;
+    seen[email] = true;
+    if (isValidEmail_(email)) valid.push(email);
+  }
+
+  return valid;
+}
+
+function isValidEmail_(value) {
+  const email = String(value || '').trim();
+  if (!email) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
