@@ -422,7 +422,7 @@ function getConfiguredAllowedEditors_() {
     .split(',')
     .map((email) => String(email || '').toLowerCase().trim())
     .filter((email) => {
-      if (!email || seen[email]) return false;
+      if (!email || seen[email] || !isValidEmail_(email)) return false;
       seen[email] = true;
       return true;
     });
